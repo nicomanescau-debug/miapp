@@ -1,0 +1,24 @@
+node_modules/
+dist/
+build/
+.env
+*.local
+
+# SQLite
+*.db
+*.db-journal
+
+# Prisma
+backend/src/generated/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*

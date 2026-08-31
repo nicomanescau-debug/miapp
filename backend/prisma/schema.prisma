@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum AccountType {
+  BANK
+  CASH
+  CARD
+  OTHER
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  name         String
+  type         AccountType   @default(OTHER)
+  initialBalance Float       @default(0)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  recurringTransactions RecurringTransaction[]
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  type         TransactionType
+  transactions Transaction[]
+  budgets      Budget[]
+  recurringTransactions RecurringTransaction[]
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  amount      Float
+  type        TransactionType
+  description String?
+  date        DateTime        @default(now())
+  account     Account         @relation(fields: [accountId], references: [id])
+  accountId   String
+  category    Category        @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  recurringTransaction   RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id])
+  recurringTransactionId String?
+  createdAt   DateTime        @default(now())
+}
+
+model RecurringTransaction {
+  id          String              @id @default(cuid())
+  amount      Float
+  type        TransactionType
+  description String?
+  account     Account             @relation(fields: [accountId], references: [id])
+  accountId   String
+  category    Category            @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  frequency   RecurrenceFrequency
+  interval    Int                 @default(1)
+  startDate   DateTime
+  endDate     DateTime?
+  nextRunDate DateTime
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  transactions Transaction[]
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  amount     Float
+  month      Int
+  year       Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  @@unique([categoryId, month, year])
+}

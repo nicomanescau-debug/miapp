@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MiFinanzas</string>
+    <string name="title_activity_main">MiFinanzas</string>
+    <string name="package_name">com.miapp.finanzas</string>
+    <string name="custom_url_scheme">com.miapp.finanzas</string>
+</resources>

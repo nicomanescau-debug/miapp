@@ -1,6 +1,7 @@
 import type { Account, AccountType, Budget, Category, RecurrenceFrequency, RecurringTransaction, Transaction } from "../types";
 
-const BASE_URL = "/api";
+const API_ROOT = import.meta.env.VITE_API_URL ?? "";
+const BASE_URL = `${API_ROOT}/api`;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -18,7 +19,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function checkHealth(): Promise<{ status: string }> {
-  const res = await fetch("/health");
+  const res = await fetch(`${API_ROOT}/health`);
   if (!res.ok) throw new Error(`Error ${res.status} en /health`);
   return res.json();
 }

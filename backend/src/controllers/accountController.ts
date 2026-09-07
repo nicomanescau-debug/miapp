@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma";
 
-export async function listAccounts(_req: Request, res: Response, next: NextFunction) {
+export async function listAccounts(req: Request, res: Response, next: NextFunction) {
   try {
-    const accounts = await prisma.account.findMany({ orderBy: { name: "asc" } });
+    const accounts = await prisma.account.findMany({
+      where: { userId: req.userId },
+      orderBy: { name: "asc" },
+    });
     res.json(accounts);
   } catch (err) {
     next(err);
@@ -12,7 +15,9 @@ export async function listAccounts(_req: Request, res: Response, next: NextFunct
 
 export async function getAccount(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
-    const account = await prisma.account.findUnique({ where: { id: req.params.id } });
+    const account = await prisma.account.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
     if (!account) return res.status(404).json({ error: "Cuenta no encontrada" });
     res.json(account);
   } catch (err) {
@@ -32,7 +37,7 @@ export async function createAccount(req: Request, res: Response, next: NextFunct
       return res.status(400).json({ error: "type debe ser BANK, CASH, CARD u OTHER" });
     }
     const account = await prisma.account.create({
-      data: { name, type: type ?? "OTHER", initialBalance: initialBalance ?? 0 },
+      data: { name, type: type ?? "OTHER", initialBalance: initialBalance ?? 0, userId: req.userId! },
     });
     res.status(201).json(account);
   } catch (err) {
@@ -46,6 +51,11 @@ export async function updateAccount(req: Request<{ id: string }>, res: Response,
     if (type && !ACCOUNT_TYPES.includes(type)) {
       return res.status(400).json({ error: "type debe ser BANK, CASH, CARD u OTHER" });
     }
+    const existing = await prisma.account.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Cuenta no encontrada" });
+
     const account = await prisma.account.update({
       where: { id: req.params.id },
       data: { name, type, initialBalance },
@@ -58,6 +68,11 @@ export async function updateAccount(req: Request<{ id: string }>, res: Response,
 
 export async function deleteAccount(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
+    const existing = await prisma.account.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Cuenta no encontrada" });
+
     await prisma.account.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (err) {

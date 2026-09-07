@@ -7,7 +7,7 @@ export async function listRecurringTransactions(req: Request, res: Response, nex
   try {
     const { accountId, categoryId, active } = req.query;
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: req.userId };
     if (accountId) where.accountId = String(accountId);
     if (categoryId) where.categoryId = String(categoryId);
     if (active !== undefined) where.active = active === "true";
@@ -25,8 +25,8 @@ export async function listRecurringTransactions(req: Request, res: Response, nex
 
 export async function getRecurringTransaction(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
-    const recurringTransaction = await prisma.recurringTransaction.findUnique({
-      where: { id: req.params.id },
+    const recurringTransaction = await prisma.recurringTransaction.findFirst({
+      where: { id: req.params.id, userId: req.userId },
       include: { account: true, category: true },
     });
     if (!recurringTransaction) return res.status(404).json({ error: "Movimiento recurrente no encontrado" });
@@ -34,6 +34,14 @@ export async function getRecurringTransaction(req: Request<{ id: string }>, res:
   } catch (err) {
     next(err);
   }
+}
+
+async function ownsAccountAndCategory(userId: string, accountId: string, categoryId: string): Promise<boolean> {
+  const [account, category] = await Promise.all([
+    prisma.account.findFirst({ where: { id: accountId, userId } }),
+    prisma.category.findFirst({ where: { id: categoryId, userId } }),
+  ]);
+  return !!account && !!category;
 }
 
 export async function createRecurringTransaction(req: Request, res: Response, next: NextFunction) {
@@ -50,6 +58,9 @@ export async function createRecurringTransaction(req: Request, res: Response, ne
     if (!VALID_FREQUENCIES.includes(frequency)) {
       return res.status(400).json({ error: "frequency debe ser DAILY, WEEKLY, MONTHLY o YEARLY" });
     }
+    if (!(await ownsAccountAndCategory(req.userId!, accountId, categoryId))) {
+      return res.status(404).json({ error: "Cuenta o categoría no encontrada" });
+    }
     const start = new Date(startDate);
     const recurringTransaction = await prisma.recurringTransaction.create({
       data: {
@@ -63,6 +74,7 @@ export async function createRecurringTransaction(req: Request, res: Response, ne
         startDate: start,
         endDate: endDate ? new Date(endDate) : undefined,
         nextRunDate: start,
+        userId: req.userId!,
       },
     });
     res.status(201).json(recurringTransaction);
@@ -80,6 +92,20 @@ export async function updateRecurringTransaction(req: Request<{ id: string }>, r
     }
     if (frequency && !VALID_FREQUENCIES.includes(frequency)) {
       return res.status(400).json({ error: "frequency debe ser DAILY, WEEKLY, MONTHLY o YEARLY" });
+    }
+
+    const existing = await prisma.recurringTransaction.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Movimiento recurrente no encontrado" });
+
+    if (accountId || categoryId) {
+      const ok = await ownsAccountAndCategory(
+        req.userId!,
+        accountId ?? existing.accountId,
+        categoryId ?? existing.categoryId
+      );
+      if (!ok) return res.status(404).json({ error: "Cuenta o categoría no encontrada" });
     }
 
     const data: Record<string, unknown> = {
@@ -112,6 +138,11 @@ export async function updateRecurringTransaction(req: Request<{ id: string }>, r
 
 export async function deleteRecurringTransaction(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
+    const existing = await prisma.recurringTransaction.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Movimiento recurrente no encontrado" });
+
     await prisma.recurringTransaction.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (err) {

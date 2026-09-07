@@ -32,23 +32,41 @@ enum RecurrenceFrequency {
   YEARLY
 }
 
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  accounts     Account[]
+  categories   Category[]
+  transactions Transaction[]
+  recurringTransactions RecurringTransaction[]
+  budgets      Budget[]
+}
+
 model Account {
   id           String        @id @default(cuid())
   name         String
   type         AccountType   @default(OTHER)
   initialBalance Float       @default(0)
   createdAt    DateTime      @default(now())
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
   transactions Transaction[]
   recurringTransactions RecurringTransaction[]
 }
 
 model Category {
   id           String        @id @default(cuid())
-  name         String        @unique
+  name         String
   type         TransactionType
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
   transactions Transaction[]
   budgets      Budget[]
   recurringTransactions RecurringTransaction[]
+
+  @@unique([userId, name])
 }
 
 model Transaction {
@@ -57,6 +75,8 @@ model Transaction {
   type        TransactionType
   description String?
   date        DateTime        @default(now())
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
   account     Account         @relation(fields: [accountId], references: [id])
   accountId   String
   category    Category        @relation(fields: [categoryId], references: [id])
@@ -71,6 +91,8 @@ model RecurringTransaction {
   amount      Float
   type        TransactionType
   description String?
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
   account     Account             @relation(fields: [accountId], references: [id])
   accountId   String
   category    Category            @relation(fields: [categoryId], references: [id])
@@ -90,8 +112,10 @@ model Budget {
   amount     Float
   month      Int
   year       Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
   category   Category @relation(fields: [categoryId], references: [id])
   categoryId String
 
-  @@unique([categoryId, month, year])
+  @@unique([userId, categoryId, month, year])
 }

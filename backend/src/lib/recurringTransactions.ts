@@ -75,6 +75,7 @@ async function runDueRecurringTransactions(): Promise<void> {
             accountId: rule.accountId,
             categoryId: rule.categoryId,
             recurringTransactionId: rule.id,
+            userId: rule.userId,
           },
         })
       ),

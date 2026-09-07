@@ -58,17 +58,20 @@ export async function checkHealth(): Promise<{ status: string }> {
   return res.json();
 }
 
+async function authRequest(path: string, username: string, password: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || "No se pudo completar la operación");
+  setToken(body.token);
+}
+
 export const authApi = {
-  login: async (username: string, password: string): Promise<void> => {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || "No se pudo iniciar sesión");
-    setToken(body.token);
-  },
+  login: (username: string, password: string) => authRequest("/auth/login", username, password),
+  register: (username: string, password: string) => authRequest("/auth/register", username, password),
   logout: () => clearToken(),
 };
 

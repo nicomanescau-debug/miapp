@@ -13,9 +13,5 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: APP_USERNAME
-        sync: false
-      - key: APP_PASSWORD_HASH
-        sync: false
       - key: NODE_VERSION
         value: 20

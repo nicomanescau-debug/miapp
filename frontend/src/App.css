@@ -132,6 +132,14 @@
   margin: 0 0 4px;
 }
 
+.login-card button[type="submit"] {
+  align-self: stretch;
+}
+
+.login-card .btn-ghost-sm {
+  align-self: center;
+}
+
 .bottom-nav {
   display: none;
   position: fixed;
@@ -678,7 +686,7 @@
   width: auto;
 }
 
-.stacked-form button {
+.stacked-form button[type="submit"] {
   align-self: flex-start;
   padding: 8px 16px;
   border-radius: 6px;
@@ -689,11 +697,11 @@
   cursor: pointer;
 }
 
-.stacked-form button:hover:not(:disabled) {
+.stacked-form button[type="submit"]:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.stacked-form button:disabled {
+.stacked-form button[type="submit"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

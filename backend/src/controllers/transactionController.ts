@@ -5,7 +5,7 @@ export async function listTransactions(req: Request, res: Response, next: NextFu
   try {
     const { accountId, categoryId, month, year } = req.query;
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: req.userId };
     if (accountId) where.accountId = String(accountId);
     if (categoryId) where.categoryId = String(categoryId);
 
@@ -31,8 +31,8 @@ export async function listTransactions(req: Request, res: Response, next: NextFu
 
 export async function getTransaction(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
-    const transaction = await prisma.transaction.findUnique({
-      where: { id: req.params.id },
+    const transaction = await prisma.transaction.findFirst({
+      where: { id: req.params.id, userId: req.userId },
       include: { account: true, category: true },
     });
     if (!transaction) return res.status(404).json({ error: "Transacción no encontrada" });
@@ -40,6 +40,14 @@ export async function getTransaction(req: Request<{ id: string }>, res: Response
   } catch (err) {
     next(err);
   }
+}
+
+async function ownsAccountAndCategory(userId: string, accountId: string, categoryId: string): Promise<boolean> {
+  const [account, category] = await Promise.all([
+    prisma.account.findFirst({ where: { id: accountId, userId } }),
+    prisma.category.findFirst({ where: { id: categoryId, userId } }),
+  ]);
+  return !!account && !!category;
 }
 
 export async function createTransaction(req: Request, res: Response, next: NextFunction) {
@@ -53,6 +61,9 @@ export async function createTransaction(req: Request, res: Response, next: NextF
     if (type !== "INCOME" && type !== "EXPENSE") {
       return res.status(400).json({ error: "type debe ser INCOME o EXPENSE" });
     }
+    if (!(await ownsAccountAndCategory(req.userId!, accountId, categoryId))) {
+      return res.status(404).json({ error: "Cuenta o categoría no encontrada" });
+    }
     const transaction = await prisma.transaction.create({
       data: {
         amount,
@@ -61,6 +72,7 @@ export async function createTransaction(req: Request, res: Response, next: NextF
         date: date ? new Date(date) : undefined,
         accountId,
         categoryId,
+        userId: req.userId!,
       },
     });
     res.status(201).json(transaction);
@@ -75,6 +87,20 @@ export async function updateTransaction(req: Request<{ id: string }>, res: Respo
     if (type && type !== "INCOME" && type !== "EXPENSE") {
       return res.status(400).json({ error: "type debe ser INCOME o EXPENSE" });
     }
+    const existing = await prisma.transaction.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Transacción no encontrada" });
+
+    if (accountId || categoryId) {
+      const ok = await ownsAccountAndCategory(
+        req.userId!,
+        accountId ?? existing.accountId,
+        categoryId ?? existing.categoryId
+      );
+      if (!ok) return res.status(404).json({ error: "Cuenta o categoría no encontrada" });
+    }
+
     const transaction = await prisma.transaction.update({
       where: { id: req.params.id },
       data: {
@@ -94,6 +120,11 @@ export async function updateTransaction(req: Request<{ id: string }>, res: Respo
 
 export async function deleteTransaction(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
+    const existing = await prisma.transaction.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Transacción no encontrada" });
+
     await prisma.transaction.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (err) {

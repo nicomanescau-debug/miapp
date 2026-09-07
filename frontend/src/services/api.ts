@@ -2,12 +2,46 @@ import type { Account, AccountType, Budget, Category, RecurrenceFrequency, Recur
 
 const API_ROOT = import.meta.env.VITE_API_URL ?? "";
 const BASE_URL = `${API_ROOT}/api`;
+const TOKEN_KEY = "miapp_token";
+
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token: string) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // localStorage may be unavailable (private mode, etc.) — session just won't persist.
+  }
+}
+
+export function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // no-op
+  }
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...options,
   });
+
+  if (res.status === 401) {
+    clearToken();
+    window.dispatchEvent(new Event("miapp:unauthorized"));
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -23,6 +57,20 @@ export async function checkHealth(): Promise<{ status: string }> {
   if (!res.ok) throw new Error(`Error ${res.status} en /health`);
   return res.json();
 }
+
+export const authApi = {
+  login: async (username: string, password: string): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || "No se pudo iniciar sesión");
+    setToken(body.token);
+  },
+  logout: () => clearToken(),
+};
 
 export const accountsApi = {
   list: () => request<Account[]>("/accounts"),

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { checkHealth } from "../services/api";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { authApi, checkHealth } from "../services/api";
 
 type IconProps = { className?: string };
 
@@ -72,12 +72,39 @@ const NAV_ITEMS = [
 ];
 
 export default function AppLayout() {
+  const navigate = useNavigate();
   const [backendStatus, setBackendStatus] = useState<"checking" | "ok" | "error">("checking");
 
+  function handleLogout() {
+    authApi.logout();
+    navigate("/login", { replace: true });
+  }
+
   useEffect(() => {
-    checkHealth()
-      .then(() => setBackendStatus("ok"))
-      .catch(() => setBackendStatus("error"));
+    let cancelled = false;
+    const MAX_ATTEMPTS = 15;
+    const RETRY_DELAY_MS = 4000;
+
+    async function pingBackend() {
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          await checkHealth();
+          if (!cancelled) setBackendStatus("ok");
+          return;
+        } catch {
+          if (attempt === MAX_ATTEMPTS) {
+            if (!cancelled) setBackendStatus("error");
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        }
+      }
+    }
+
+    pingBackend();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const statusLabel =
@@ -91,9 +118,14 @@ export default function AppLayout() {
     <div className="app-shell">
       <header className="mobile-topbar">
         <div className="brand">MiApp</div>
-        <div className="backend-status">
-          <span className={`status-dot ${backendStatus}`} />
-          {statusLabel}
+        <div className="topbar-right">
+          <div className="backend-status">
+            <span className={`status-dot ${backendStatus}`} />
+            {statusLabel}
+          </div>
+          <button type="button" className="btn-ghost-sm" onClick={handleLogout}>
+            Salir
+          </button>
         </div>
       </header>
 
@@ -112,6 +144,9 @@ export default function AppLayout() {
           <span className={`status-dot ${backendStatus}`} />
           {statusLabel}
         </div>
+        <button type="button" className="btn-ghost-sm" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
       </aside>
 
       <main className="content">

@@ -58,21 +58,36 @@ export async function checkHealth(): Promise<{ status: string }> {
   return res.json();
 }
 
-async function authRequest(path: string, username: string, password: string): Promise<void> {
+async function authPost(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify(body),
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || "No se pudo completar la operación");
-  setToken(body.token);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "No se pudo completar la operación");
+  return data;
 }
 
 export const authApi = {
-  login: (username: string, password: string) => authRequest("/auth/login", username, password),
-  register: (username: string, password: string) => authRequest("/auth/register", username, password),
+  login: async (username: string, password: string) => {
+    const data = await authPost("/auth/login", { username, password });
+    setToken(data.token as string);
+  },
+  register: async (username: string, email: string, password: string) => {
+    const data = await authPost("/auth/register", { username, email, password });
+    setToken(data.token as string);
+  },
   logout: () => clearToken(),
+  me: () => request<{ id: string; username: string; email: string | null }>("/auth/me"),
+  setEmail: (email: string) =>
+    request<{ id: string; username: string; email: string | null }>("/auth/email", {
+      method: "PUT",
+      body: JSON.stringify({ email }),
+    }),
+  forgotPassword: (email: string) => authPost("/auth/forgot", { email }),
+  resetPassword: (email: string, code: string, password: string) =>
+    authPost("/auth/reset-password", { email, code, password }),
 };
 
 export const accountsApi = {

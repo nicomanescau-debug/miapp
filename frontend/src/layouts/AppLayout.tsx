@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { authApi, checkHealth } from "../services/api";
+import EmailReminderBanner from "../components/EmailReminderBanner";
 
 type IconProps = { className?: string };
 
@@ -150,6 +151,7 @@ export default function AppLayout() {
       </aside>
 
       <main className="content">
+        <EmailReminderBanner />
         <Outlet />
       </main>
 

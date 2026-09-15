@@ -1,14 +1,17 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const passwordReset = Boolean((location.state as { passwordReset?: boolean } | null)?.passwordReset);
 
   function toggleMode() {
     setMode((m) => (m === "login" ? "register" : "login"));
@@ -23,7 +26,7 @@ export default function LoginPage() {
       if (mode === "login") {
         await authApi.login(username, password);
       } else {
-        await authApi.register(username, password);
+        await authApi.register(username, email, password);
       }
       navigate("/", { replace: true });
     } catch (err) {
@@ -39,6 +42,9 @@ export default function LoginPage() {
         <div className="brand">MiApp</div>
         <h1>{mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</h1>
         {error && <div className="error-banner">{error}</div>}
+        {!error && passwordReset && mode === "login" && (
+          <div className="success-banner">Contraseña actualizada, ya podés iniciar sesión</div>
+        )}
         <label>
           <span>Usuario</span>
           <input
@@ -50,6 +56,19 @@ export default function LoginPage() {
             required
           />
         </label>
+        {mode === "register" && (
+          <label>
+            <span>Email</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+            <span className="field-hint">Lo usamos solo para recuperar tu cuenta si olvidás la contraseña</span>
+          </label>
+        )}
         <label>
           <span>Contraseña</span>
           <input
@@ -64,6 +83,11 @@ export default function LoginPage() {
         <button type="submit" disabled={submitting}>
           {submitting ? "Procesando..." : mode === "login" ? "Ingresar" : "Crear cuenta"}
         </button>
+        {mode === "login" && (
+          <Link to="/recuperar" className="btn-ghost-sm">
+            ¿Olvidaste tu usuario o contraseña?
+          </Link>
+        )}
         <button type="button" className="btn-ghost-sm" onClick={toggleMode}>
           {mode === "login" ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
         </button>

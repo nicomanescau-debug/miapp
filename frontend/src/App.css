@@ -138,6 +138,8 @@
 
 .login-card .btn-ghost-sm {
   align-self: center;
+  text-decoration: none;
+  text-align: center;
 }
 
 .bottom-nav {
@@ -602,6 +604,53 @@
   padding: 10px 12px;
   margin-bottom: 16px;
   font-size: 14px;
+}
+
+.success-banner {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.banner-warning {
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.banner-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-inline-form input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.banner-error {
+  color: #ef4444;
+  font-size: 12px;
+  width: 100%;
 }
 
 .transaction-item {

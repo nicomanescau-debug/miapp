@@ -14,7 +14,9 @@ function getTransporter() {
     host: SMTP_HOST,
     port: Number(SMTP_PORT),
     secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    // Google muestra la contraseña de aplicación en grupos de 4 ("abcd efgh ijkl mnop");
+    // si se pega tal cual, la autenticación falla. Quitamos los espacios.
+    auth: { user: SMTP_USER, pass: SMTP_PASS.replace(/\s/g, "") },
   });
   return transporter;
 }
